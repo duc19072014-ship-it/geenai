@@ -1,0 +1,6 @@
+{
+  "name": "GREEN AI – Phân Loại Rác Thông Minh",
+  "description": "Ứng dụng AI phân loại rác thông minh cho học sinh nhận biết rác tái chế, rác hữu cơ và rác còn lại để bảo vệ môi trường xanh.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
