@@ -164,7 +164,11 @@ export const ProductionDebugPanel: React.FC<ProductionDebugPanelProps> = ({
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase block">Môi trường</span>
                 <span className="font-extrabold text-slate-800">
-                  {serverStatus?.environment === 'vercel_production' ? 'Vercel Production' : 'AI Studio Preview'}
+                  {typeof window !== 'undefined' &&
+                  (window.location.hostname.includes('vercel.app') ||
+                    serverStatus?.environment === 'vercel_production')
+                    ? 'Vercel Production'
+                    : 'AI Studio Preview'}
                 </span>
               </div>
             </div>
@@ -180,7 +184,7 @@ export const ProductionDebugPanel: React.FC<ProductionDebugPanelProps> = ({
                 >
                   {serverStatus?.apiKeyConfigured
                     ? `Đã nạp (${serverStatus.apiKeySource})`
-                    : 'Chưa tìm thấy trên Vercel'}
+                    : 'Chưa cấu hình trên Vercel'}
                 </span>
               </div>
             </div>

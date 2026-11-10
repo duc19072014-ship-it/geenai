@@ -12,7 +12,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-app.use(express.json({ limit: '20mb' }));
+// Safe body parsing: When running inside Vercel Serverless Function,
+// Vercel pre-consumes the stream and parses JSON into req.body.
+// Express body-parser will throw "InternalServerError: stream is not readable" if it tries to re-read.
+app.use((req, res, next) => {
+  if (req.body) {
+    if (typeof req.body === 'string') {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch (e) {
+        // keep as is
+      }
+    }
+    if (typeof req.body === 'object') {
+      return next();
+    }
+  }
+  express.json({ limit: '20mb' })(req, res, next);
+});
 
 /**
  * Resolves Gemini API Key from common environment variable names.
