@@ -189,7 +189,7 @@ export const ProductionDebugPanel: React.FC<ProductionDebugPanelProps> = ({
               <Cpu className="w-4 h-4 text-slate-500 shrink-0" />
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase block">Mô hình AI Thị Giác</span>
-                <span className="font-extrabold text-slate-800">gemini-3.8-flash</span>
+                <span className="font-extrabold text-slate-800">{serverStatus?.model || 'gemini-3.5-flash'}</span>
               </div>
             </div>
           </div>
@@ -245,7 +245,7 @@ export const ProductionDebugPanel: React.FC<ProductionDebugPanelProps> = ({
                 <p className="text-slate-600 leading-relaxed">
                   {serverStatus?.apiKeyConfigured
                     ? `Khóa API bảo mật máy chủ đã nạp qua biến: ${serverStatus.apiKeySource}. Không lộ ra phía trình duyệt.`
-                    : 'Cảnh báo: Chưa có biến GEMINI_API_KEY trong Project Settings trên Vercel.'}
+                    : 'Cảnh báo: Chưa cấu hình biến GEMINI_API_KEY trong Project Settings trên Vercel.'}
                 </p>
               </div>
 
@@ -262,14 +262,14 @@ export const ProductionDebugPanel: React.FC<ProductionDebugPanelProps> = ({
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
                     <Cpu className="w-4 h-4 text-purple-600" />
-                    3. Phân Tích Gemini 3.8 Flash
+                    3. Phân Tích Gemini Vision ({serverStatus?.model || 'gemini-3.5-flash'})
                   </span>
                   {renderStatusIcon(getStageStatus('ai_analysis'))}
                 </div>
                 <p className="text-slate-600 leading-relaxed">
                   {currentDebugInfo?.durationMs
-                    ? `Thời gian suy luận: ${currentDebugInfo.durationMs}ms • Mô hình: ${currentDebugInfo.modelUsed || 'gemini-3.8-flash'}`
-                    : 'Gửi ảnh nén cùng hướng dẫn hệ thống nhận diện đa vật thể & định vị khung viền 4 màu.'}
+                    ? `Thời gian suy luận: ${currentDebugInfo.durationMs}ms • Mô hình: ${currentDebugInfo.modelUsed || serverStatus?.model || 'gemini-3.5-flash'}`
+                    : 'Gửi ảnh nén cùng chỉ dẫn phân tích nhận diện đa vật thể & định vị khung viền chuẩn xác.'}
                 </p>
               </div>
 
@@ -291,7 +291,7 @@ export const ProductionDebugPanel: React.FC<ProductionDebugPanelProps> = ({
                   {renderStatusIcon(getStageStatus('result_processing'))}
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Kiểm tra tính hợp lệ của tọa độ [0 - 1000], lọc 4 nhóm phân loại (Tái chế, Hữu cơ, Còn lại, Chưa xác định) và tính độ tin cậy.
+                  Kiểm tra tọa độ [0 - 1000], lọc 5 nhóm phân loại (Tái chế, Hữu cơ, Còn lại, Nguy hại, Chưa xác định) và tính độ tin cậy.
                 </p>
               </div>
             </div>

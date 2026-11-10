@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   Sparkles,
   Camera,
@@ -8,10 +8,11 @@ import {
   EyeOff,
   Layers,
   Zap,
+  AlertTriangle,
 } from 'lucide-react';
 import { WasteScanResponse, DetectedObject } from '../types/waste';
 import { preprocessImage } from '../utils/imagePreprocessor';
-import { analyzeWasteImage } from '../services/wasteAnalysisService';
+import { analyzeWasteImage, checkServerDiagnostics } from '../services/wasteAnalysisService';
 import { ImageUpload } from './ImageUpload';
 import { CameraScanner } from './CameraScanner';
 import { BoundingBoxOverlay } from './BoundingBoxOverlay';
@@ -36,12 +37,22 @@ export const ObjectDetectionScanner: React.FC<ObjectDetectionScannerProps> = ({ 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDebugOpen, setIsDebugOpen] = useState(false);
   const [currentDebugInfo, setCurrentDebugInfo] = useState<DebugDiagnosticInfo | null>(null);
+  const [serverApiKeyMissing, setServerApiKeyMissing] = useState(false);
   const [imageStats, setImageStats] = useState<{
     originalSizeKB?: number;
     compressedSizeKB?: number;
     dimensions?: string;
     mimeType?: string;
   } | null>(null);
+
+  // Check server diagnostics on mount to give immediate feedback on Vercel
+  useEffect(() => {
+    checkServerDiagnostics().then((diag) => {
+      if (!diag.apiKeyConfigured) {
+        setServerApiKeyMissing(true);
+      }
+    });
+  }, []);
 
   // Cached sample preset (if user selected one of the 6 test cases)
   const currentMockPresetRef = useRef<WasteScanResponse | null>(null);
@@ -191,14 +202,42 @@ export const ObjectDetectionScanner: React.FC<ObjectDetectionScannerProps> = ({ 
         <div className="text-center space-y-3 max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-linear-to-r from-emerald-100 via-teal-100 to-blue-100 text-emerald-950 text-xs sm:text-sm font-black border border-emerald-300 shadow-2xs">
             <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
-            GREEN AI 4.0 – SMART MULTI-OBJECT SCANNER
+            GREEN AI 5.0 – SMART MULTI-OBJECT SCANNER
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Quét & Phân Loại Từng Món Rác Thông Minh
           </h1>
           <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-            Hỗ trợ ảnh một món rác hoặc đống rác sinh hoạt hỗn hợp. AI tự động định vị khung viền 4 màu chuẩn xác, nhận diện rác hữu cơ, rác tái chế và đưa ra lời khuyên xử lý an toàn!
+            Hỗ trợ ảnh một món rác hoặc đống rác sinh hoạt hỗn hợp. AI tự động định vị khung viền 5 màu chuẩn xác, nhận diện rác tái chế, hữu cơ, rác còn lại và rác nguy hại để xử lý an toàn!
           </p>
+        </div>
+      )}
+
+      {/* Proactive Vercel API Key Banner if not yet configured */}
+      {serverApiKeyMissing && !errorMessage && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-amber-50 border-2 border-amber-300 text-amber-950 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm animate-fade-in">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-extrabold text-amber-950 block text-sm">
+                Lưu ý: Chưa phát hiện biến GEMINI_API_KEY trên máy chủ Vercel
+              </span>
+              <p className="font-medium text-amber-900 leading-relaxed text-xs">
+                Để quét ảnh thực tế trên Vercel không bị lỗi máy chủ, bạn cần thêm biến{' '}
+                <code className="bg-amber-200/80 px-1 py-0.5 rounded font-mono font-bold text-amber-950">
+                  GEMINI_API_KEY
+                </code>{' '}
+                trong <span className="font-bold">Project Settings ➔ Environment Variables</span> rồi bấm{' '}
+                <span className="font-bold underline">Redeploy</span>.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsDebugOpen(true)}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 self-end sm:self-auto transition-transform active:scale-95 cursor-pointer"
+          >
+            Mở Bảng Chẩn Đoán
+          </button>
         </div>
       )}
 

@@ -74,10 +74,20 @@ export async function checkServerDiagnostics(): Promise<{
     if (!res.ok) {
       return {
         status: `HTTP ${res.status}`,
-        environment: 'unknown',
+        environment: 'vercel_or_unknown',
         apiKeyConfigured: false,
-        apiKeySource: 'server_unreachable',
-        model: 'gemini-3.8-flash',
+        apiKeySource: `Lỗi máy chủ (${res.status})`,
+        model: 'gemini-3.5-flash',
+      };
+    }
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return {
+        status: 'html_fallback',
+        environment: 'vercel_rewrite_mismatch',
+        apiKeyConfigured: false,
+        apiKeySource: 'chưa_kết_nối_api',
+        model: 'gemini-3.5-flash',
       };
     }
     return await res.json();
@@ -87,7 +97,7 @@ export async function checkServerDiagnostics(): Promise<{
       environment: 'network_failure',
       apiKeyConfigured: false,
       apiKeySource: err.message || 'error',
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash',
     };
   }
 }
@@ -136,12 +146,57 @@ export async function analyzeWasteImage(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errJson = await response.json().catch(() => ({}));
-      const stage = errJson.debug_info?.stage || 'server_error';
+      const contentType = response.headers.get('content-type') || '';
+      let errJson: any = {};
+
+      if (contentType.includes('application/json')) {
+        errJson = await response.json().catch(() => ({}));
+      } else {
+        const rawText = await response.text().catch(() => '');
+        // When Vercel returns HTML 500/503/504 error page or index.html rewrite
+        if (response.status === 503 || response.status === 500) {
+          errJson = {
+            error:
+              'Máy chủ Vercel chưa được cấu hình GEMINI_API_KEY hoặc hàm Serverless gặp sự cố. Vui lòng thêm biến GEMINI_API_KEY trong Vercel Settings > Environment Variables và bấm Redeploy.',
+            debug_info: {
+              stage: 'api_configuration',
+              status: 'error',
+              httpStatus: response.status,
+              rawResponse: rawText.slice(0, 150),
+              troubleshootingTip:
+                'Vào Vercel Dashboard > Settings > Environment Variables > Thêm GEMINI_API_KEY > Vào Deployments > Redeploy.',
+            },
+          };
+        } else if (response.status === 504) {
+          errJson = {
+            error: 'Máy chủ phản hồi quá thời gian quy định (504 Gateway Timeout). Vui lòng thử lại với ảnh nhỏ hơn.',
+            debug_info: {
+              stage: 'ai_analysis',
+              status: 'error',
+              httpStatus: 504,
+            },
+          };
+        }
+      }
+
+      const stage = errJson.debug_info?.stage || (response.status === 503 ? 'api_configuration' : 'server_error');
       const code = stage.toUpperCase();
 
+      let errorMessage = errJson.error;
+      if (!errorMessage) {
+        if (response.status === 503) {
+          errorMessage =
+            'Chưa cấu hình GEMINI_API_KEY trên Vercel. Vui lòng vào Vercel Settings > Environment Variables để thêm khóa.';
+        } else if (response.status === 500) {
+          errorMessage =
+            'Lỗi máy chủ (500). Vui lòng kiểm tra cấu hình biến môi trường GEMINI_API_KEY trên Vercel Dashboard.';
+        } else {
+          errorMessage = `Lỗi máy chủ (${response.status}). Vui lòng kiểm tra lại kết nối.`;
+        }
+      }
+
       throw new WasteAnalysisError(
-        errJson.error || `Lỗi máy chủ (${response.status}). Vui lòng thử lại.`,
+        errorMessage,
         code,
         errJson.debug_info,
         response.status

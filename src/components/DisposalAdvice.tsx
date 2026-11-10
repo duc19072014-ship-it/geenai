@@ -21,7 +21,7 @@ export const DisposalAdvice: React.FC<DisposalAdviceProps> = ({
           <div className="space-y-2 max-w-xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-emerald-200">
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-              GREEN AI 4.0 – KẾT QUẢ QUÉT THÔNG MINH
+              GREEN AI 5.0 – KẾT QUẢ QUÉT THÔNG MINH
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Phát Hiện {totalObjects} Món Rác Trong Khung Hình

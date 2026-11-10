@@ -18,27 +18,51 @@ app.use(express.json({ limit: '20mb' }));
  * Resolves Gemini API Key from common environment variable names.
  * Ensures compatibility between Google AI Studio and Vercel Project Settings.
  */
+function cleanApiKey(val: string | undefined): string | null {
+  if (!val || typeof val !== 'string') return null;
+  let cleaned = val.trim();
+  // Strip leading/trailing double or single quotes that users might copy
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  // Ignore placeholder values
+  if (
+    cleaned.includes('MY_GEMINI_API_KEY') ||
+    cleaned.includes('YOUR_API_KEY') ||
+    cleaned.length < 15
+  ) {
+    return null;
+  }
+  return cleaned;
+}
+
 function getGeminiApiKey(): { key: string | null; source: string } {
   const candidates: Array<{ name: string; val: string | undefined }> = [
     { name: 'GEMINI_API_KEY', val: process.env.GEMINI_API_KEY },
     { name: 'GOOGLE_API_KEY', val: process.env.GOOGLE_API_KEY },
-    { name: 'API_KEY', val: process.env.API_KEY },
+    { name: 'GOOGLE_GEMINI_API_KEY', val: process.env.GOOGLE_GEMINI_API_KEY },
     { name: 'VITE_GEMINI_API_KEY', val: process.env.VITE_GEMINI_API_KEY },
+    { name: 'API_KEY', val: process.env.API_KEY },
+    { name: 'GEMINI_KEY', val: process.env.GEMINI_KEY },
   ];
   for (const c of candidates) {
-    if (c.val && typeof c.val === 'string' && c.val.trim().length > 10) {
-      return { key: c.val.trim(), source: c.name };
+    const cleaned = cleanApiKey(c.val);
+    if (cleaned) {
+      return { key: cleaned, source: c.name };
     }
   }
   return { key: null, source: 'missing' };
 }
 
-// Health check endpoint (support both /api/health and /health for Vercel rewrite compatibility)
+// Health check endpoint (support /api/health, /health, /api/debug, /debug)
 app.get(['/api/health', '/health'], (req, res) => {
   const { key, source } = getGeminiApiKey();
   res.json({
     status: 'ok',
-    version: '4.0.0',
+    version: '5.0.0',
     service: 'GREEN AI – SMART WASTE SCANNER',
     environment: process.env.VERCEL === '1' ? 'vercel_production' : 'local_preview',
     apiKeyConfigured: Boolean(key),
@@ -254,16 +278,16 @@ const PRESET_TEST_CASES: Record<string, any> = {
   },
 };
 
-// GREEN AI 4.0: INTELLIGENT MULTI-OBJECT WASTE SCANNER ENDPOINT
-// Mounted on /api/scan-waste, /api/analyze, /scan-waste, /analyze for full Vercel serverless compatibility
-app.post(['/api/scan-waste', '/scan-waste', '/api/analyze', '/analyze'], async (req, res) => {
+// GREEN AI 5.0: INTELLIGENT MULTI-OBJECT WASTE SCANNER ENDPOINT
+// Mounted on /api/scan-waste, /scan-waste, /api/analyze, /analyze, and / for full Vercel serverless compatibility
+app.post(['/api/scan-waste', '/scan-waste', '/api/analyze', '/analyze', '/'], async (req, res) => {
   const startTime = Date.now();
   const environment = process.env.VERCEL === '1' ? 'vercel_production' : 'local_preview';
 
   try {
-    const imageBase64 = req.body.imageBase64 || req.body.image_data || req.body.image;
-    const sampleId = req.body.sampleId;
-    let mimeType = req.body.mimeType || 'image/jpeg';
+    const imageBase64 = req.body?.imageBase64 || req.body?.image_data || req.body?.image;
+    const sampleId = req.body?.sampleId;
+    let mimeType = req.body?.mimeType || 'image/jpeg';
 
     // 1. STAGE: IMAGE UPLOAD VALIDATION
     if (!imageBase64 || typeof imageBase64 !== 'string') {
@@ -335,17 +359,17 @@ app.post(['/api/scan-waste', '/scan-waste', '/api/analyze', '/analyze'], async (
     // 2. STAGE: API CONFIGURATION CHECK
     const { key: apiKey, source: apiKeySource } = getGeminiApiKey();
     if (!apiKey) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
-        error: 'Chưa cấu hình GEMINI_API_KEY trên môi trường máy chủ (Vercel / Cloud).',
+        error: 'Chưa cấu hình GEMINI_API_KEY trên Vercel. Vui lòng mở Vercel Dashboard > Settings > Environment Variables để thêm biến GEMINI_API_KEY và bấm Redeploy.',
         debug_info: {
           stage: 'api_configuration',
           status: 'error',
           environment,
           apiKeyStatus: 'missing',
-          httpStatus: 500,
+          httpStatus: 503,
           troubleshootingTip:
-            'Trên Vercel: Mở Vercel Dashboard > Project Settings > Environment Variables > Thêm biến "GEMINI_API_KEY" với giá trị API Key của bạn (chọn cả Production, Preview, Development), sau đó bấm Redeploy.',
+            'Trên Vercel: Mở Vercel Dashboard > Settings > Environment Variables > Thêm biến "GEMINI_API_KEY" với API Key của bạn (chọn cả Production, Preview, Development), sau đó vào tab Deployments bấm Redeploy.',
           timestamp: new Date().toISOString(),
         },
       });
